@@ -333,3 +333,71 @@ int GestorBD::mejorTiempo(int usuarioId, int nivel)
     return -1;
 }
 
+
+QString GestorBD::resumenProgreso(int usuarioId)
+{
+    QSqlQuery consulta(m_bd);
+
+    consulta.prepare(
+        "SELECT COUNT(*), "
+        "SUM(CASE WHEN superada = 1 THEN 1 ELSE 0 END), "
+        "SUM(CASE WHEN superada = 0 THEN 1 ELSE 0 END) "
+        "FROM partida WHERE usuario_id = ?"
+    );
+
+    consulta.addBindValue(usuarioId);
+
+    if (!consulta.exec() || !consulta.next()) {
+        return "No se pudieron consultar las estadísticas.";
+    }
+
+    int total = consulta.value(0).toInt();
+    int ganadas = consulta.value(1).toInt();
+    int perdidas = consulta.value(2).toInt();
+
+    QSqlQuery movimientos(m_bd);
+    movimientos.prepare(
+        "SELECT "
+        "SUM(CASE WHEN m.acierto = 1 THEN 1 ELSE 0 END), "
+        "SUM(CASE WHEN m.acierto = 0 THEN 1 ELSE 0 END) "
+        "FROM movimiento m "
+        "INNER JOIN partida p ON p.id = m.partida_id "
+        "WHERE p.usuario_id = ?"
+    );
+
+    movimientos.addBindValue(usuarioId);
+
+    int correctos = 0;
+    int incorrectos = 0;
+
+    if (movimientos.exec() && movimientos.next()) {
+        correctos = movimientos.value(0).toInt();
+        incorrectos = movimientos.value(1).toInt();
+    }
+
+    QString texto;
+    texto += "RESUMEN DE TU PROGRESO\n\n";
+    texto += QString("Partidas jugadas: %1\n").arg(total);
+    texto += QString("Partidas superadas: %1\n").arg(ganadas);
+    texto += QString("Partidas no superadas: %1\n").arg(perdidas);
+    texto += QString("Movimientos correctos: %1\n").arg(correctos);
+    texto += QString("Movimientos incorrectos: %1\n\n").arg(incorrectos);
+
+    texto += "MEJOR TIEMPO POR NIVEL\n";
+
+    for (int nivel = 1; nivel <= 5; nivel++) {
+        int tiempo = mejorTiempo(usuarioId, nivel);
+
+        QString resultado = tiempo == -1
+            ? "Sin completar"
+            : QString("%1 min %2 s")
+                .arg(tiempo / 60)
+                .arg(tiempo % 60);
+
+        texto += QString("Nivel %1: %2\n")
+            .arg(nivel)
+            .arg(resultado);
+    }
+
+    return texto;
+}

@@ -19,14 +19,14 @@ public:
 
     Usuario obtenerUsuario(int id);
 
-    // Devuelve el ID del usuario o -1 si los datos son incorrectos.
     int autenticar(const QString &nombreUsuario,
                    const QString &clave);
 
     bool guardarPartida(const Partida &partida);
 
-    // Devuelve -1 si no existen partidas superadas.
     int mejorTiempo(int usuarioId, int nivel);
+
+    QString resumenProgreso(int usuarioId);
 
 private:
     bool crearTablas();
